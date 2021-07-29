@@ -13,8 +13,12 @@ import {
 import { queryTags } from './src/queryTags'
 import { pushMongoRecipe } from './src/pushMongoRecipe'
 
+import { queryUserFavorites } from './src/queryUserFavorites'
+import { addUserFavorite } from './src/addUserFavorite'
+
 const app = express()
 app.use(cors())
+app.use(express.json())
 
 MongoClient.connect('mongodb://localhost:27017', function (err, client) {
 	if (err) throw new Error('Cannot connect to MongoDB')
@@ -66,9 +70,7 @@ MongoClient.connect('mongodb://localhost:27017', function (err, client) {
 
 	// recipe submit endpoint
 	app.post('/api/submitrecipe/', async (req, res) => {
-		// let dbRes = pushMongoRecipe(req.body)
 		let dbRes = pushMongoRecipe(req)
-		//console.log('dbRes :>> ', await dbRes)
 
 		res.status(200)
 		// res.end(JSON.stringify(dbRes))
@@ -96,6 +98,17 @@ MongoClient.connect('mongodb://localhost:27017', function (err, client) {
 	})
 
 	//////////////
+
+	app.get('/api/favorites', async (req, res) => {
+		let dbRes = await queryUserFavorites(req)
+
+		res.json(dbRes)
+	})
+	app.post('/api/favorites', async (req, res) => {
+		let dbRes = await addUserFavorite(req)
+
+		res.json(dbRes)
+	})
 
 	app.listen(5001, () => {
 		console.log('The application is listening on port 5001!')

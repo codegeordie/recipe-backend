@@ -1,27 +1,35 @@
 import { ObjectId } from 'mongodb'
 import { updateMongo } from './updateMongo'
+import { Request } from 'express'
 
-export async function pushMongoRecipe(req) {
+export async function pushMongoRecipe(req: Request) {
 	const recipes = req.app.locals.db.collection('recipes')
-	//const query = req.query
 	const recipe = req.body
 
-	recipeUpdate(recipe)
-	//const updatedRecipe = recipeUpdate(recipe)
-	recipes.insertOne(recipe).then(updateMongo(req))
+	const updatedRecipe = recipeUpdate(recipe)
+	recipes.insertOne(updatedRecipe).then(updateMongo(req))
 }
 
 const recipeUpdate = recipe => {
-	recipe.ingredients.forEach(i => {
-		i.ingredient_id = new ObjectId(i.ingredient_id)
-		i.quantity = unitConversion(parseInt(i.quantity), i.measure)
-		i.measure = 'g'
-	})
+	const newIngredients = recipe.ingredients.map(i => ({
+		ingredient_id: new ObjectId(i.ingredient_id),
+		quantity: unitConversion(parseInt(i.quantity), i.measure),
+		measure: 'g',
+	}))
 
-	recipe.servings = parseInt(recipe.servings)
-	recipe.tags = []
-	recipe.calories = 0
-	recipe.cost = { value: 0, currency: 'USD' }
+	const newRecipe = {
+		name: recipe.name,
+		description: recipe.description,
+		image: recipe.image,
+		servings: parseInt(recipe.servings),
+		tags: [],
+		calories: 0,
+		cost: { value: 0, currency: 'USD' },
+		createdBy: new ObjectId(recipe.uid),
+		ingredients: newIngredients,
+	}
+
+	return newRecipe
 }
 
 // converts other units to grams
