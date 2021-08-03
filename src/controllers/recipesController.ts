@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { Request } from 'express'
 import { ObjectId } from 'mongodb'
 import { updateMongo } from '../updateMongo'
 
@@ -9,7 +9,6 @@ const lookupIngredients = {
 	foreignField: '_id',
 	as: 'ingredients_full',
 }
-
 //
 
 export async function recipesFindAll(req: Request) {

@@ -1,7 +1,9 @@
 import express, { Request, Response, NextFunction } from 'express'
+import 'dotenv/config'
 import cors from 'cors'
 import formidable from 'formidable'
 import { MongoClient } from 'mongodb'
+import cookieParser from 'cookie-parser'
 
 import { queryRecipes } from './src/queryRecipesByFilter'
 import { queryRecipesById } from './src/queryRecipesById'
@@ -15,10 +17,12 @@ import { pushMongoRecipe } from './src/pushMongoRecipe'
 
 import { queryUserFavorites } from './src/queryUserFavorites'
 import { addUserFavorite } from './src/addUserFavorite'
+import { verifyNextAuthToken } from './src/middleware/verifyNextAuthToken'
 
 const app = express()
-app.use(cors())
+app.use(cors({ credentials: true, origin: 'http://localhost:3000' }))
 app.use(express.json())
+app.use(cookieParser())
 
 MongoClient.connect('mongodb://localhost:27017', function (err, client) {
 	if (err) throw new Error('Cannot connect to MongoDB')
@@ -98,17 +102,21 @@ MongoClient.connect('mongodb://localhost:27017', function (err, client) {
 	})
 
 	//////////////
+	///////////////
 
-	app.get('/api/favorites', async (req, res) => {
+	app.get('/api/favorites', verifyNextAuthToken, async (req, res) => {
 		let dbRes = await queryUserFavorites(req)
 
 		res.json(dbRes)
 	})
+
 	app.post('/api/favorites', async (req, res) => {
 		let dbRes = await addUserFavorite(req)
 
 		res.json(dbRes)
 	})
+
+	///////////////////////////
 
 	app.listen(5001, () => {
 		console.log('The application is listening on port 5001!')

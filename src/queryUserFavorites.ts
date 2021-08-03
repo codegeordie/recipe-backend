@@ -3,10 +3,8 @@ import { ObjectId } from 'mongodb'
 
 export async function queryUserFavorites(req: Request) {
 	const users = req.app.locals.db.collection('users')
-	//const recipes = req.app.locals.db.collection('recipes')
-	const query = req.query
-
-	console.log('query favorites was called')
+	const userId = req.query.id
+	//if (!userId) throw Error('cannot query favorites, no user id on request')
 
 	let result = []
 
@@ -19,7 +17,7 @@ export async function queryUserFavorites(req: Request) {
 
 	result = await users
 		.aggregate([
-			{ $match: { _id: new ObjectId(query.id) } },
+			{ $match: { _id: new ObjectId(userId) } },
 			{ $lookup: lookupRecipes },
 			{ $project: { _id: 0, favoritesFull: 1 } },
 		])
