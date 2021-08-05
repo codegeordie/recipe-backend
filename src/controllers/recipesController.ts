@@ -1,4 +1,4 @@
-import { Request } from 'express'
+import { Request, Response } from 'express'
 import { ObjectId } from 'mongodb'
 import { updateMongo } from '../updateMongo'
 
@@ -11,76 +11,93 @@ const lookupIngredients = {
 }
 //
 
-export async function recipesFindAll(req: Request) {
+interface Recipe {}
+
+//////////////
+export const recipesGetById = async (req: Request, res: Response) => {
 	const recipes = req.app.locals.db.collection('recipes')
+	const recipeId = req.params.id
 
-	let result = []
+	if (typeof recipeId !== 'string') {
+		throw Error('Invalid query parameters. Recipe ID must be provided')
+	}
 
-	result = await recipes
+	const response: Recipe = await recipes
+		.aggregate([
+			{ $match: { _id: new ObjectId(recipeId) } },
+			{ $lookup: lookupIngredients },
+		])
+		.toArray()
+	res.json(response)
+}
+
+//////////////
+export const recipesGetAll = async (req: Request, res: Response) => {
+	const recipes = req.app.locals.db.collection('recipes')
+	const response: Recipe[] = await recipes
 		.aggregate([
 			{ $match: { _id: { $exists: true } } },
 			{ $lookup: lookupIngredients },
 		])
 		.toArray()
-
-	return result
+	res.json(response)
 }
 
-//
-//
-//
-//
-//
-
-export async function queryRecipes(req: Request) {
+//////////////////
+export const recipesGet = async (req: Request, res: Response) => {
 	const recipes = req.app.locals.db.collection('recipes')
 	const query = req.query
 
-	let result = []
-	let tagFilter = [].concat(query.filters)
-	let [cal_min, cal_max] = [parseInt(query.cal_min), parseInt(query.cal_max)]
+	// core query array
+	const queryScaffold = [{ $lookup: lookupIngredients }]
 
-	// const lookupIngredients = {
-	// 	from: 'ingredients',
-	// 	localField: 'ingredients.ingredient_id',
-	// 	foreignField: '_id',
-	// 	as: 'ingredients_full',
-	// }
-
-	const reggie = new RegExp(query.name, 'i')
-	const nameQuery = { $match: { name: { $regex: reggie } } }
-	const tagQuery = { $match: { tags: { $all: tagFilter } } }
-	const calQuery = {
-		$match: {
-			$and: [
-				{ serving_cal: { $gte: cal_min } },
-				{ serving_cal: { $lte: cal_max } },
-			],
-		},
+	// search by name
+	if (query.name) {
+		const name = Array.isArray(query.name) ? query.name[0] : query.name
+		const reggie = new RegExp(name, 'i')
+		const nameQuery = { $match: { name: { $regex: reggie } } }
+		queryScaffold.unshift(nameQuery)
 	}
+
+	//search by filter tags
+	if (query.filters) {
+		const tagFilter = [].concat(query.filters)
+		const tagQuery = { $match: { tags: { $all: tagFilter } } }
+		queryScaffold.unshift(tagQuery)
+	}
+
+	// search by calories
+	if (query.cal_max || query.cal_min) {
+		const [cal_min, cal_max] = [
+			parseInt(query.cal_min),
+			parseInt(query.cal_max),
+		]
+		const calQuery = {
+			$match: {
+				$and: [
+					{ serving_cal: { $gte: cal_min } },
+					{ serving_cal: { $lte: cal_max } },
+				],
+			},
+		}
+		queryScaffold.unshift(calQuery)
+	}
+
+	// return all if no query provided
+	const defaultQuery = { $match: { _id: { $exists: true } } }
+	if (queryScaffold.length === 1) queryScaffold.unshift(defaultQuery)
+
 	const calSet = {
 		$set: {
 			serving_cal: { $divide: ['$calories', '$servings'] },
 		},
 	}
+	queryScaffold.unshift(calSet)
 
-	const defaultQuery = { $match: { _id: { $exists: true } } }
+	// search mongodb with final query
+	const result = await recipes.aggregate(queryScaffold).toArray()
 
-	const finalQuery = [{ $lookup: lookupIngredients }]
-
-	if (query.name) finalQuery.unshift(nameQuery)
-	if (query.filters) finalQuery.unshift(tagQuery)
-	if (query.cal_max || query.cal_min) {
-		finalQuery.unshift(calQuery)
-		// finalQuery.unshift(calSet)
-	}
-
-	finalQuery.unshift(calSet)
-
-	if (finalQuery.length === 1) finalQuery.unshift(defaultQuery)
-
-	result = await recipes.aggregate(finalQuery).toArray()
-
+	// convery currency on results
 	if (query.curr) {
 		const convertCurrency = (currObj, convTo) => {
 			let ratioToUSD = 1
@@ -100,69 +117,38 @@ export async function queryRecipes(req: Request) {
 		return converted
 	}
 
-	return result
+	res.json(result)
 }
 
-//
-//
-//
-//
-//
-
-export async function queryRecipesById(req: Request) {
+//////////////////////
+export const recipesCreate = async (req: Request, res: Response) => {
 	const recipes = req.app.locals.db.collection('recipes')
-	const query = req.query
+	const updatedRecipe = recipeUpdate(req.body)
 
-	let result = []
-
-	// const lookupIngredients = {
-	// 	from: 'ingredients',
-	// 	localField: 'ingredients.ingredient_id',
-	// 	foreignField: '_id',
-	// 	as: 'ingredients_full',
-	// }
-
-	result = await recipes
-		.aggregate([
-			{ $match: { _id: new ObjectId(query.id) } },
-			{ $lookup: lookupIngredients },
-		])
-		.toArray()
-
-	return result
-}
-
-//
-//
-//
-//
-//
-
-export async function pushMongoRecipe(req: Request) {
-	const recipes = req.app.locals.db.collection('recipes')
-	const recipe = req.body
-
-	recipeUpdate(recipe)
-	//const updatedRecipe = recipeUpdate(recipe)
-
-	recipes.insertOne(recipe).then(updateMongo(req))
+	const response = recipes.insertOne(updatedRecipe).then(updateMongo(req))
+	res.json(response)
 }
 
 const recipeUpdate = recipe => {
-	recipe.ingredients.forEach(i => {
-		i.ingredient_id = new ObjectId(i.ingredient_id)
-		i.quantity = unitConversion(parseInt(i.quantity), i.measure)
-		i.measure = 'g'
-	})
+	const newIngredients = recipe.ingredients.map(i => ({
+		ingredient_id: new ObjectId(i.ingredient_id),
+		quantity: unitConversion(parseInt(i.quantity), i.measure),
+		measure: 'g',
+	}))
 
-	recipe.servings = parseInt(recipe.servings)
-	recipe.tags = []
-	recipe.calories = 0
-	recipe.cost = { value: 0, currency: 'USD' }
-	// new
-	recipe.createdBy = new ObjectId(recipe.uid)
-	recipe.createdAt = Date.now()
-	recipe.updatedAt = Date.now()
+	const newRecipe = {
+		name: recipe.name,
+		description: recipe.description,
+		image: recipe.image,
+		servings: parseInt(recipe.servings),
+		tags: [],
+		calories: 0,
+		cost: { value: 0, currency: 'USD' },
+		createdBy: new ObjectId(recipe.uid),
+		ingredients: newIngredients,
+	}
+
+	return newRecipe
 }
 
 // converts other units to grams
@@ -182,10 +168,3 @@ const unitConversion = (value, measure) => {
 	output = Math.round(output)
 	return output
 }
-
-//
-//
-//
-//
-//
-//

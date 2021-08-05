@@ -1,20 +1,14 @@
-import express, { Request, Response, NextFunction } from 'express'
+import express from 'express'
 import 'dotenv/config'
 import cors from 'cors'
 import formidable from 'formidable'
 import { MongoClient } from 'mongodb'
 import cookieParser from 'cookie-parser'
 
-import { queryRecipes } from './src/queryRecipesByFilter'
-import { queryRecipesById } from './src/queryRecipesById'
-import { queryRecipesByAll } from './src/queryRecipesbyAll'
-import {
-	queryIngredientsByAll,
-	queryIngredientsByName,
-} from './src/queryIngredients'
-import { queryTags } from './src/queryTags'
-import { pushMongoRecipe } from './src/pushMongoRecipe'
+import { recipeRouter } from './src/routes/recipeRoutes'
+import { ingredientRouter } from './src/routes/ingredientsRoutes'
 
+import { queryTags } from './src/queryTags'
 import { queryUserFavorites } from './src/queryUserFavorites'
 import { addUserFavorite } from './src/addUserFavorite'
 import { verifyNextAuthToken } from './src/middleware/verifyNextAuthToken'
@@ -30,55 +24,8 @@ MongoClient.connect('mongodb://localhost:27017', function (err, client) {
 	app.locals.db = client?.db('recipe')
 	if (!app.locals.db) throw new Error('Database is undefined')
 
-	// app.get('/api/recipes/', async (req: Request, res: Response) => {
-	// 	let dbRes = await queryRecipes(req)
-
-	// 	res.json(dbRes)
-	// })
-	////////////////
-
-	// recipe by ID endpoint
-	app.get('/api/recipeid/', async (req, res) => {
-		let dbRes = await queryRecipesById(req)
-
-		res.json(dbRes)
-	})
-
-	// all recipes endpoint
-	app.get('/api/allrecipes/', async (req, res) => {
-		let dbRes = await queryRecipesByAll(req)
-
-		res.json(dbRes)
-	})
-
-	// recipe search endpoint
-	app.get('/api/recipes/', async (req, res) => {
-		let dbRes = await queryRecipes(req)
-
-		res.json(dbRes)
-	})
-
-	// ingredients endpoint
-	app.get('/api/ingredients_by_name/', async (req, res) => {
-		let dbRes = await queryIngredientsByName(req)
-
-		res.json(dbRes)
-	})
-
-	// ingredients endpoint
-	app.get('/api/ingredients_all/', async (req, res) => {
-		let dbRes = await queryIngredientsByAll(req)
-
-		res.json(dbRes)
-	})
-
-	// recipe submit endpoint
-	app.post('/api/submitrecipe/', async (req, res) => {
-		let dbRes = pushMongoRecipe(req)
-
-		res.status(200)
-		// res.end(JSON.stringify(dbRes))
-	})
+	app.use('/api/recipes', recipeRouter)
+	app.use('/api/ingredients/', ingredientRouter)
 
 	// currently: get all possible tags
 	app.get('/api/tags', async (req, res) => {

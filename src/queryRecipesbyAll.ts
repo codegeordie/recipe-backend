@@ -1,23 +1,23 @@
-import { Request, Response } from 'express'
+// import { Request, Response } from 'express'
 
-export async function queryRecipesByAll(req: Request) {
-	const recipes = req.app.locals.db.collection('recipes')
+// export async function queryRecipesByAll(req: Request) {
+// 	const recipes = req.app.locals.db.collection('recipes')
 
-	let result = []
+// 	let result = []
 
-	const lookupIngredients = {
-		from: 'ingredients',
-		localField: 'ingredients.ingredient_id',
-		foreignField: '_id',
-		as: 'ingredients_full',
-	}
+// 	const lookupIngredients = {
+// 		from: 'ingredients',
+// 		localField: 'ingredients.ingredient_id',
+// 		foreignField: '_id',
+// 		as: 'ingredients_full',
+// 	}
 
-	result = await recipes
-		.aggregate([
-			{ $match: { _id: { $exists: true } } },
-			{ $lookup: lookupIngredients },
-		])
-		.toArray()
+// 	result = await recipes
+// 		.aggregate([
+// 			{ $match: { _id: { $exists: true } } },
+// 			{ $lookup: lookupIngredients },
+// 		])
+// 		.toArray()
 
-	return result
-}
+// 	return result
+// }
