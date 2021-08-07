@@ -1,5 +1,7 @@
 import { Request, Response } from 'express'
+import _ from 'lodash'
 import { ObjectId } from 'mongodb'
+import { UserRequest, RecipeBase } from '../../@types/types'
 import { updateMongo } from '../updateMongo'
 
 //
@@ -11,10 +13,23 @@ const lookupIngredients = {
 }
 //
 
-interface Recipe {}
+///////////////
+export const recipesGetAll = async (req: Request, res: Response) => {
+	console.log('recipesGetAll')
+	const recipes = req.app.locals.db.collection('recipes')
+
+	const response = await recipes
+		.aggregate([
+			{ $match: { _id: { $exists: true } } },
+			{ $lookup: lookupIngredients },
+		])
+		.toArray()
+	return response
+}
 
 //////////////
 export const recipesGetById = async (req: Request, res: Response) => {
+	console.log('recipesGetById')
 	const recipes = req.app.locals.db.collection('recipes')
 	const recipeId = req.params.id
 
@@ -22,7 +37,7 @@ export const recipesGetById = async (req: Request, res: Response) => {
 		throw Error('Invalid query parameters. Recipe ID must be provided')
 	}
 
-	const response: Recipe = await recipes
+	const response = await recipes
 		.aggregate([
 			{ $match: { _id: new ObjectId(recipeId) } },
 			{ $lookup: lookupIngredients },
@@ -31,36 +46,27 @@ export const recipesGetById = async (req: Request, res: Response) => {
 	res.json(response)
 }
 
-//////////////
-export const recipesGetAll = async (req: Request, res: Response) => {
-	const recipes = req.app.locals.db.collection('recipes')
-	const response: Recipe[] = await recipes
-		.aggregate([
-			{ $match: { _id: { $exists: true } } },
-			{ $lookup: lookupIngredients },
-		])
-		.toArray()
-	res.json(response)
-}
-
 //////////////////
-export const recipesGet = async (req: Request, res: Response) => {
+export const recipesGet = async (req: UserRequest, res: Response) => {
+	console.log('recipesGet')
 	const recipes = req.app.locals.db.collection('recipes')
 	const query = req.query
 
+	type QueryScaffold = {}[]
 	// core query array
-	const queryScaffold = [{ $lookup: lookupIngredients }]
+	const queryScaffold: QueryScaffold = [{ $lookup: lookupIngredients }]
 
-	// search by name
-	if (query.name) {
-		const name = Array.isArray(query.name) ? query.name[0] : query.name
-		const reggie = new RegExp(name, 'i')
+	// search recipes (by name)
+	if (query.search) {
+		const search = Array.isArray(query.search) ? query.search[0] : query.search
+		const reggie = new RegExp(search as string, 'i')
 		const nameQuery = { $match: { name: { $regex: reggie } } }
 		queryScaffold.unshift(nameQuery)
 	}
 
 	//search by filter tags
 	if (query.filters) {
+		//@ts-ignore
 		const tagFilter = [].concat(query.filters)
 		const tagQuery = { $match: { tags: { $all: tagFilter } } }
 		queryScaffold.unshift(tagQuery)
@@ -69,8 +75,8 @@ export const recipesGet = async (req: Request, res: Response) => {
 	// search by calories
 	if (query.cal_max || query.cal_min) {
 		const [cal_min, cal_max] = [
-			parseInt(query.cal_min),
-			parseInt(query.cal_max),
+			parseInt(query.cal_min as string),
+			parseInt(query.cal_max as string),
 		]
 		const calQuery = {
 			$match: {
@@ -97,9 +103,32 @@ export const recipesGet = async (req: Request, res: Response) => {
 	// search mongodb with final query
 	const result = await recipes.aggregate(queryScaffold).toArray()
 
+	//add user favorites boolean
+	if (req.userId) {
+		const users = req.app.locals.db.collection('users')
+		const userId = new ObjectId(req.userId)
+		const favoritesResponse = await users
+			.find(userId)
+			.project({ favorites: 1, _id: 0 })
+			.toArray()
+		const userFavorites = favoritesResponse[0].favorites
+
+		result.forEach((recipe: RecipeBase) => {
+			if (_.find(userFavorites, { recipeId: recipe._id })) {
+				recipe.favorited = true
+			} else {
+				recipe.favorited = false
+			}
+		})
+	}
+
 	// convery currency on results
+
 	if (query.curr) {
-		const convertCurrency = (currObj, convTo) => {
+		const convertCurrency = (
+			currObj: { value: number; curr?: string },
+			convTo: string
+		) => {
 			let ratioToUSD = 1
 			if (convTo === 'EUR') ratioToUSD = 1.18
 			else if (convTo === 'MXN') ratioToUSD = 20.13
@@ -110,9 +139,9 @@ export const recipesGet = async (req: Request, res: Response) => {
 			}
 		}
 
-		const converted = result.map(recipe => ({
+		const converted = result.map((recipe: RecipeBase) => ({
 			...recipe,
-			cost: convertCurrency(recipe.cost, query.curr),
+			cost: convertCurrency(recipe.cost, query.curr as string),
 		}))
 		return converted
 	}
@@ -129,7 +158,7 @@ export const recipesCreate = async (req: Request, res: Response) => {
 	res.json(response)
 }
 
-const recipeUpdate = recipe => {
+const recipeUpdate = (recipe: RecipeBase) => {
 	const newIngredients = recipe.ingredients.map(i => ({
 		ingredient_id: new ObjectId(i.ingredient_id),
 		quantity: unitConversion(parseInt(i.quantity), i.measure),
@@ -152,7 +181,7 @@ const recipeUpdate = recipe => {
 }
 
 // converts other units to grams
-const unitConversion = (value, measure) => {
+const unitConversion = (value: number, measure: string) => {
 	let output = 0
 	switch (measure) {
 		case 'g':

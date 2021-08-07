@@ -5,6 +5,7 @@ import {
 	recipesGetAll,
 	recipesCreate,
 } from '../controllers/recipesController'
+import { verifyNextAuthToken } from '../middleware/verifyNextAuthToken'
 
 export const recipeRouter = Router()
 
@@ -13,7 +14,7 @@ recipeRouter.post('/', recipesCreate)
 // read
 recipeRouter.get('/all', recipesGetAll)
 recipeRouter.get('/id/:id', recipesGetById)
-recipeRouter.get('/', recipesGet)
+recipeRouter.get('/', verifyNextAuthToken, recipesGet)
 // update
 //recipeRouter.put('/:id', () => {})
 // delete

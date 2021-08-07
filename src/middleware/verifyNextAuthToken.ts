@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
+import { UserRequest } from '../../@types/types'
 
 export const verifyNextAuthToken = (
-	req: Request,
+	req: UserRequest,
 	res: Response,
 	next: NextFunction
 ) => {
@@ -14,12 +15,11 @@ export const verifyNextAuthToken = (
 		jwt.verify(token, secret, (err, decoded) => {
 			if (err) throw Error(`middleware cannot verify token. ${err.message}`)
 			else {
-				console.log('decoded :>> ', decoded)
+				req.userId = decoded?.sub
 				next()
 			}
 		})
 	} else {
-		res.send('Token rejected')
-		throw Error('TOKEN UNDEFINED IN AUTH MIDDLEWARE')
+		throw Error('no authentication token found')
 	}
 }
