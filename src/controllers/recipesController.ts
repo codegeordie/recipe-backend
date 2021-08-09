@@ -24,7 +24,7 @@ export const recipesGetAll = async (req: Request, res: Response) => {
 			{ $lookup: lookupIngredients },
 		])
 		.toArray()
-	return response
+	res.json(response)
 }
 
 //////////////

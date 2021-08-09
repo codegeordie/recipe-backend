@@ -20,6 +20,7 @@ export const verifyNextAuthToken = (
 			}
 		})
 	} else {
-		throw Error('no authentication token found')
+		next()
+		//throw Error('no authentication token found')
 	}
 }
