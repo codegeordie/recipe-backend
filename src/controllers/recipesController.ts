@@ -150,10 +150,38 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 }
 
 //////////////////////
+
+export const recipesDelete = async (req: Request, res: Response) => {
+	console.log('recipesDelete')
+	const recipes = req.app.locals.db.collection('recipes')
+	const recipeId = req.params.id
+
+	const response = await recipes.deleteOne({ _id: new ObjectId(recipeId) })
+	res.json(response)
+}
+
+//////////////////////
+
+export const recipesUpdate = async (req: Request, res: Response) => {
+	console.log('recipesUpdate')
+	const recipes = req.app.locals.db.collection('recipes')
+	const recipeId = req.params.id
+
+	const response = recipes.updateOne(
+		{ _id: new ObjectId(recipeId) },
+		{ $set: req.body }
+	)
+
+	res.json(response)
+}
+
+//////////////////////
+
 export const recipesCreate = async (req: Request, res: Response) => {
+	console.log('recipesCreate')
 	const recipes = req.app.locals.db.collection('recipes')
 	const updatedRecipe = recipeUpdate(req.body)
-
+	console.log('updatedRecipe :>> ', updatedRecipe)
 	const response = recipes.insertOne(updatedRecipe).then(updateMongo(req))
 	res.json(response)
 }

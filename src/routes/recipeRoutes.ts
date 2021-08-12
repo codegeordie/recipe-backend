@@ -4,6 +4,8 @@ import {
 	recipesGetById,
 	recipesGetAll,
 	recipesCreate,
+	recipesUpdate,
+	recipesDelete,
 } from '../controllers/recipesController'
 import { verifyNextAuthToken } from '../middleware/verifyNextAuthToken'
 
@@ -16,6 +18,6 @@ recipeRouter.get('/all', recipesGetAll)
 recipeRouter.get('/id/:id', recipesGetById)
 recipeRouter.get('/', verifyNextAuthToken, recipesGet)
 // update
-//recipeRouter.put('/:id', () => {})
+recipeRouter.put('/id/:id', verifyNextAuthToken, recipesUpdate)
 // delete
-//recipeRouter.delete('/:id', () => {})
+recipeRouter.delete('/id/:id', verifyNextAuthToken, recipesDelete)
