@@ -7,21 +7,28 @@ export const verifyNextAuthToken = (
 	res: Response,
 	next: NextFunction
 ) => {
-	const token: string | undefined = req.cookies['next-auth.session-token']
 	const secret = process.env.JWT_SECRET
-	if (!secret) throw Error('A secret wasnt provided!')
+	if (!secret) throw Error('(auth verification): JWT secret undefined')
 
-	if (token) {
+	const token: string | undefined = req.cookies['next-auth.session-token']
+	if (!token) {
+		req.userId = undefined
+		next()
+	} else {
 		jwt.verify(token, secret, (err, decoded) => {
-			if (err) throw Error(`middleware cannot verify token. ${err.message}`)
+			if (err)
+				throw Error(`(auth verification): Cannot verify token. ${err.message}`)
 			else {
-				req.userId = decoded?.sub
-				next()
+				try {
+					req.userId = decoded?.sub
+					//console.log('verifcation successfull')
+				} catch (err) {
+					console.log('(auth verification): possibly no userId found :>> ', err)
+					req.userId = undefined
+				} finally {
+					next()
+				}
 			}
 		})
-	} else {
-		console.log('auth token rejected')
-		next()
-		//throw Error('no authentication token found')
 	}
 }

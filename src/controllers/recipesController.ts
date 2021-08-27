@@ -5,6 +5,7 @@ import { UserRequest, RecipeBase } from '../../@types/types'
 import { updateMongo } from '../updateMongo'
 
 //
+//type lookupIngredients = typeof lookupIngredients
 const lookupIngredients = {
 	from: 'ingredients',
 	localField: 'ingredients.ingredient_id',
@@ -15,7 +16,7 @@ const lookupIngredients = {
 
 ///////////////
 export const recipesGetAll = async (req: Request, res: Response) => {
-	console.log('recipesGetAll')
+	//console.log('recipesGetAll')
 	const recipes = req.app.locals.db.collection('recipes')
 
 	const response = await recipes
@@ -29,7 +30,7 @@ export const recipesGetAll = async (req: Request, res: Response) => {
 
 //////////////
 export const recipesGetById = async (req: Request, res: Response) => {
-	console.log('recipesGetById')
+	//console.log('recipesGetById')
 	const recipes = req.app.locals.db.collection('recipes')
 	const recipeId = req.params.id
 
@@ -48,11 +49,19 @@ export const recipesGetById = async (req: Request, res: Response) => {
 
 //////////////////
 export const recipesGet = async (req: UserRequest, res: Response) => {
-	console.log('recipesGet')
+	//onsole.log('recipesGet')
 	const recipes = req.app.locals.db.collection('recipes')
 	const query = req.query
 
 	type QueryScaffold = {}[]
+	//type tagQuery = typeof tagQuery
+	// type QueryScaffold =
+	// 	Partial<nameQuery> &
+	// 	Partial<tagQuery> &
+	// 	Partial<calQuery> &
+	// 	Partial<defaultQuery> &
+	// 	lookupIngredients
+
 	// core query array
 	const queryScaffold: QueryScaffold = [{ $lookup: lookupIngredients }]
 
@@ -89,21 +98,43 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 		queryScaffold.unshift(calQuery)
 	}
 
+	//unmatch private recipes unless created by user
+	if (req.userId) {
+		if (query.showOnlyCreated === 'true') {
+			const showCreatedQuery = {
+				$match: { createdBy: new ObjectId(req.userId) },
+			}
+			queryScaffold.unshift(showCreatedQuery)
+		} else {
+			const createdByQuery = {
+				$match: {
+					$or: [{ isPrivate: false }, { createdBy: new ObjectId(req.userId) }],
+				},
+			}
+			queryScaffold.unshift(createdByQuery)
+		}
+	} else {
+		const privateQuery = { $match: { isPrivate: false } }
+		queryScaffold.unshift(privateQuery)
+	}
+
 	// return all if no query provided
-	const defaultQuery = { $match: { _id: { $exists: true } } }
-	if (queryScaffold.length === 1) queryScaffold.unshift(defaultQuery)
+	if (queryScaffold.length === 1) {
+		const defaultQuery = { $match: { _id: { $exists: true } } }
+		queryScaffold.unshift(defaultQuery)
+	}
 
 	const calSet = {
 		$set: {
-			serving_cal: { $divide: ['$calories', '$servings'] },
+			serving_cal: { $round: [{ $divide: ['$calories', '$servings'] }] },
 		},
 	}
 	queryScaffold.unshift(calSet)
 
 	// search mongodb with final query
-	const result = await recipes.aggregate(queryScaffold).toArray()
+	let result = await recipes.aggregate(queryScaffold).toArray()
 
-	//add user favorites boolean
+	// mark user favorites if logged in
 	if (req.userId) {
 		const users = req.app.locals.db.collection('users')
 		const userId = new ObjectId(req.userId)
@@ -120,11 +151,16 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 				recipe.favorited = false
 			}
 		})
+
+		if (query.showOnlyFavorites === 'true') {
+			result = result.filter((recipe: RecipeBase) => {
+				return recipe.favorited
+			})
+		}
 	}
 
-	// convery currency on results
-
-	if (query.curr) {
+	// convert currency on results
+	if (query.currency) {
 		const convertCurrency = (
 			currObj: { value: number; curr?: string },
 			convTo: string
@@ -139,11 +175,11 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 			}
 		}
 
-		const converted = result.map((recipe: RecipeBase) => ({
+		result = result.map((recipe: RecipeBase) => ({
 			...recipe,
-			cost: convertCurrency(recipe.cost, query.curr as string),
+			cost: convertCurrency(recipe.cost, query.currency as string),
 		}))
-		return converted
+		//return converted
 	}
 
 	res.json(result)
@@ -151,12 +187,20 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 
 //////////////////////
 
-export const recipesDelete = async (req: Request, res: Response) => {
+export const recipesDelete = async (req: UserRequest, res: Response) => {
 	console.log('recipesDelete')
 	const recipes = req.app.locals.db.collection('recipes')
 	const recipeId = req.params.id
 
-	const response = await recipes.deleteOne({ _id: new ObjectId(recipeId) })
+	const response = await recipes.deleteOne(
+		{
+			$and: [
+				{ _id: new ObjectId(recipeId) },
+				{ createdBy: new ObjectId(req.userId) },
+			],
+		}
+		//res => console.log('res :>> ', res)
+	)
 	res.json(response)
 }
 
@@ -167,7 +211,7 @@ export const recipesUpdate = async (req: Request, res: Response) => {
 	const recipes = req.app.locals.db.collection('recipes')
 	const recipeId = req.params.id
 
-	const response = recipes.updateOne(
+	const response = await recipes.updateOne(
 		{ _id: new ObjectId(recipeId) },
 		{ $set: req.body }
 	)
@@ -177,16 +221,17 @@ export const recipesUpdate = async (req: Request, res: Response) => {
 
 //////////////////////
 
-export const recipesCreate = async (req: Request, res: Response) => {
+export const recipesCreate = async (req: UserRequest, res: Response) => {
 	console.log('recipesCreate')
 	const recipes = req.app.locals.db.collection('recipes')
-	const updatedRecipe = recipeUpdate(req.body)
-	console.log('updatedRecipe :>> ', updatedRecipe)
+	const updatedRecipe = recipeUpdate(req.body, req.userId)
+
+	//console.log('updatedRecipe :>> ', updatedRecipe)
 	const response = recipes.insertOne(updatedRecipe).then(updateMongo(req))
 	res.json(response)
 }
 
-const recipeUpdate = (recipe: RecipeBase) => {
+const recipeUpdate = (recipe: RecipeBase, userId: string) => {
 	const newIngredients = recipe.ingredients.map(i => ({
 		ingredient_id: new ObjectId(i.ingredient_id),
 		quantity: unitConversion(parseInt(i.quantity), i.measure),
@@ -198,11 +243,14 @@ const recipeUpdate = (recipe: RecipeBase) => {
 		description: recipe.description,
 		image: recipe.image,
 		servings: parseInt(recipe.servings),
+		ingredients: newIngredients,
 		tags: [],
 		calories: 0,
 		cost: { value: 0, currency: 'USD' },
-		createdBy: new ObjectId(recipe.uid),
-		ingredients: newIngredients,
+		createdBy: new ObjectId(userId),
+		isPrivate: recipe.isPrivate,
+		createdAt: new Date(),
+		updatedAt: new Date(),
 	}
 
 	return newRecipe

@@ -7,17 +7,17 @@ import {
 	recipesUpdate,
 	recipesDelete,
 } from '../controllers/recipesController'
-import { verifyNextAuthToken } from '../middleware/verifyNextAuthToken'
+import { enforceNextAuthToken } from '../middleware/enforceNextAuthToken'
 
 export const recipeRouter = Router()
 
 // create
-recipeRouter.post('/', recipesCreate)
+recipeRouter.post('/', enforceNextAuthToken, recipesCreate)
 // read
 recipeRouter.get('/all', recipesGetAll)
 recipeRouter.get('/id/:id', recipesGetById)
-recipeRouter.get('/', verifyNextAuthToken, recipesGet)
+recipeRouter.get('/', recipesGet)
 // update
-recipeRouter.put('/id/:id', verifyNextAuthToken, recipesUpdate)
+recipeRouter.put('/id/:id', enforceNextAuthToken, recipesUpdate)
 // delete
-recipeRouter.delete('/id/:id', verifyNextAuthToken, recipesDelete)
+recipeRouter.delete('/id/:id', enforceNextAuthToken, recipesDelete)

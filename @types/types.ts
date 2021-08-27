@@ -6,13 +6,13 @@ export type UserRequest = Request & {
 
 /////
 
-type RecipeIngredients = {
+export type RecipeIngredients = {
 	ingredient_id: string
 	quantity: number
 	measure: 'g' | 'oz' | 'lb'
 }
 
-export interface RecipeBase {
+export type RecipeBase = {
 	_id: string
 	name: string
 	description: string
@@ -24,4 +24,8 @@ export interface RecipeBase {
 	ingredients: RecipeIngredients[]
 	favorited?: boolean
 	uid?: string
+	createdBy?: string
+	isPrivate?: boolean
+	createdAt?: Date
+	updatedAt?: Date
 }
