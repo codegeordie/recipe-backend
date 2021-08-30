@@ -12,13 +12,16 @@ import { userRouter } from './src/routes/userRoutes'
 import { queryTags } from './src/queryTags'
 import { verifyNextAuthToken } from './src/middleware/verifyNextAuthToken'
 
+const PORT = process.env.PORT || 5001
+
 const app = express()
-app.use(cors({ credentials: true, origin: 'http://localhost:3000' }))
+//app.use(cors({ credentials: true, origin: 'http://localhost:3000' }))
+app.use(cors({ credentials: true, origin: true }))
 app.use(express.json())
 app.use(cookieParser())
 app.use(verifyNextAuthToken)
 
-MongoClient.connect('mongodb://localhost:27017', function (err, client) {
+MongoClient.connect(process.env.DB_URL2, function (err, client) {
 	if (err) throw new Error('Cannot connect to MongoDB')
 
 	app.locals.db = client?.db('recipe')
@@ -50,8 +53,8 @@ MongoClient.connect('mongodb://localhost:27017', function (err, client) {
 	})
 
 	///////////////
-	app.listen(5001, () => {
-		console.log('The application is listening on port 5001!')
+	app.listen(PORT, () => {
+		console.log(`The application is listening on port ${PORT}!`)
 	})
 })
 
