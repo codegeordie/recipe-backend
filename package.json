@@ -8,7 +8,8 @@
 		"build": "npx swc server.ts -o build/server.js && npx swc src -d build/src",
 		"dev": "node build/server.js",
 		"go": "npm run build && npm run dev",
-		"watch": "concurrently \"npx tsc -w\" \"nodemon build/server.js\""
+		"watch": "concurrently \"npx tsc -w\" \"nodemon build/server.js\"",
+		"start": "npm run build && npm run dev"
 	},
 	"keywords": [],
 	"author": "",
