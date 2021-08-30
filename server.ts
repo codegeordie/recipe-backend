@@ -21,7 +21,7 @@ app.use(express.json())
 app.use(cookieParser())
 app.use(verifyNextAuthToken)
 
-MongoClient.connect(process.env.DB_URL2, function (err, client) {
+MongoClient.connect(process.env.DB_URL, function (err, client) {
 	if (err) throw new Error('Cannot connect to MongoDB')
 
 	app.locals.db = client?.db('recipe')
