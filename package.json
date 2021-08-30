@@ -9,7 +9,7 @@
 		"dev": "node build/server.js",
 		"go": "npm run build && npm run dev",
 		"watch": "concurrently \"npx tsc -w\" \"nodemon build/server.js\"",
-		"start": "npm run build && npm run dev"
+		"start": "node build/server.js"
 	},
 	"keywords": [],
 	"author": "",
