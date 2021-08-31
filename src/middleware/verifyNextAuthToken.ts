@@ -21,7 +21,8 @@ export const verifyNextAuthToken = (
 			else {
 				try {
 					req.userId = decoded?.sub
-					//console.log('verifcation successfull')
+					console.log('verifcation successfull')
+					console.log('decoded :>> ', decoded)
 				} catch (err) {
 					console.log('(auth verification): possibly no userId found :>> ', err)
 					req.userId = undefined
