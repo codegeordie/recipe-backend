@@ -11,7 +11,10 @@ export const verifyNextAuthToken = (
 	if (!secret) throw Error('(auth verification): JWT secret undefined')
 
 	const token: string | undefined = req.cookies['next-auth.session-token']
+	console.log('token :>> ', token)
+
 	if (!token) {
+		console.log('no token')
 		req.userId = undefined
 		next()
 	} else {
