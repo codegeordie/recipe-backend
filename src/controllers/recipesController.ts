@@ -142,7 +142,8 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 			.find(userId)
 			.project({ favorites: 1, _id: 0 })
 			.toArray()
-		const userFavorites = favoritesResponse[0].favorites
+
+		const userFavorites = favoritesResponse[0]?.favorites
 
 		result.forEach((recipe: RecipeBase) => {
 			if (_.find(userFavorites, { recipeId: recipe._id })) {

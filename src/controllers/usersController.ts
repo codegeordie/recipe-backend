@@ -54,9 +54,9 @@ export const toggleUserFavorite = async (req: UserRequest, res: Response) => {
 export const getUserCurrency = async (req: UserRequest, res: Response) => {
 	const users = req.app.locals.db.collection('users')
 	const response = await users.find({ _id: new ObjectId(req.userId) }).toArray()
-	const userCurrency = response[0].currencyPref
+	const userCurrency = response[0]?.currencyPref
 
-	res.json(userCurrency)
+	res.json(userCurrency || { id: 'USD', value: 'US Dollars' })
 }
 
 ////////////////
