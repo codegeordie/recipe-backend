@@ -16,8 +16,8 @@ const PORT = process.env.PORT || 5001
 
 const app = express()
 app.set('trust proxy', 1)
-app.use(cors({ credentials: true, origin: 'https://recipe-1.vercel.app' }))
-//app.use(cors({ credentials: true, origin: true }))
+//app.use(cors({ credentials: true, origin: 'https://recipe-1.vercel.app' }))
+app.use(cors({ credentials: true, origin: true }))
 app.use(express.json())
 app.use(cookieParser())
 app.use(verifyNextAuthToken)

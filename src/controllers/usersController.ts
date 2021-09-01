@@ -18,7 +18,7 @@ export const toggleUserFavorite = async (req: UserRequest, res: Response) => {
 		.toArray()
 
 	type userFavorite = { recipeId: ObjectId }
-	const userFavoritesArray: userFavorite[] = usersResponse[0].favorites
+	const userFavoritesArray: userFavorite[] = usersResponse[0]?.favorites
 	const { recipeId, setFavBool } = req.body
 
 	if (!userFavoritesArray && setFavBool === true) {
@@ -47,7 +47,7 @@ export const toggleUserFavorite = async (req: UserRequest, res: Response) => {
 			}
 		)
 	}
-	res.status(200)
+	res.status(200).send('favorited')
 }
 
 ////////////////
@@ -69,5 +69,5 @@ export const setUserCurrency = async (req: UserRequest, res: Response) => {
 		{ upsert: true }
 	)
 
-	res.status(200)
+	res.status(200).send('set currency')
 }
