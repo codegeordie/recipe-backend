@@ -10,7 +10,9 @@ export const verifyNextAuthToken = (
 	const secret = process.env.JWT_SECRET
 	if (!secret) throw Error('(auth verification): JWT secret undefined')
 
-	const token: string | undefined = req.cookies['next-auth.session-token']
+	const token: string | undefined =
+		req.cookies['next-auth.session-token'] ??
+		req.cookies['__Secure-next-auth.session-token']
 	console.log('token :>> ', token)
 
 	if (!token) {
