@@ -13,7 +13,7 @@ export const verifyNextAuthToken = (
 	const token: string | undefined =
 		req.cookies['next-auth.session-token'] ??
 		req.cookies['__Secure-next-auth.session-token']
-	console.log('token :>> ', token)
+	//console.log('token :>> ', token)
 
 	if (!token) {
 		console.log('no token')
@@ -27,7 +27,7 @@ export const verifyNextAuthToken = (
 				try {
 					req.userId = decoded?.sub
 					console.log('verifcation successfull')
-					console.log('decoded :>> ', decoded)
+					//console.log('decoded :>> ', decoded)
 				} catch (err) {
 					console.log('(auth verification): possibly no userId found :>> ', err)
 					req.userId = undefined

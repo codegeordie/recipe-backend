@@ -28,7 +28,8 @@ app.use(verifyNextAuthToken)
 MongoClient.connect(process.env.DB_URL222, function (err, client) {
 	if (err) throw new Error('Cannot connect to MongoDB')
 
-	app.locals.db = client?.db('recipe')
+	//app.locals.db = client?.db('recipe')
+	app.locals.db = client?.db('recipedb')
 	app.locals.dbNEW = client?.db('recipedb')
 	if (!app.locals.db) throw new Error('Database is undefined')
 
@@ -56,63 +57,34 @@ MongoClient.connect(process.env.DB_URL222, function (err, client) {
 			res.json({ url: uploadFilePath })
 		})
 	})
+	/////////////////
 
-	app.post('/api/populatethestuff', async (req, res) => {
-		const recipes = req.app.locals.dbNEW.collection('recipes')
-		//console.log('req.body :>> ', req.body)
-		try {
-			let dbRes = await recipes.insertMany(req.body)
-			res.send(dbRes)
-		} catch (err) {
-			console.log('err :>> ', err)
-			res.send('err')
-		}
+	// app.get('/api/testinggg/', async (req, res) => {
+	// 	const recipes = req.app.locals.db.collection('recipes')
+	// 	const query = req.query
 
-		//console.log('dbRes :>> ', dbRes)
-	})
+	// 	let hasMore,
+	// 		limit = 20,
+	// 		cursor = query.cursor ?? 0
 
-	app.get('/api/populatethestuff', async (req, res) => {
-		console.log('test')
-		const recipes = req.app.locals.dbNEW.collection('recipes')
+	// 	if (query.limit) limit = parseInt(query.limit)
+	// 	console.log('limit :>> ', limit)
+	// 	console.log('cursor :>> ', cursor)
 
-		//try {
-		let dbRes = await recipes
-			.aggregate([
-				{
-					$group: {
-						_id: { label: '$label' },
-						uniqueIds: { $addToSet: '$_id' },
-						count: { $sum: 1 },
-					},
-				},
-				{
-					$match: {
-						count: { $gt: 1 },
-					},
-				},
-				{
-					$sort: {
-						count: -1,
-					},
-				},
-			])
-			.toArray()
-		console.log('dbRes :>> ', dbRes)
-		res.json(dbRes)
-		// } catch (err) {
-		// 	res.send(err)
-		// }
-	})
+	// 	const response = await recipes
+	// 		.aggregate([
+	// 			{ $match: { _id: { $exists: true } } },
+	// 			{ $match: { _id: { $gt: new ObjectId(cursor) } } },
+	// 		])
+	// 		.sort({ _id: 1 })
+	// 		.limit(limit)
+	// 		.toArray()
 
-	app.delete('/api/populatethestuff/:id', async (req, res) => {
-		console.log('test')
-		const recipes = req.app.locals.dbNEW.collection('recipes')
+	// 	cursor = response[limit - 1]._id
+	// 	console.log('cursor :>> ', cursor)
 
-		const toDelete = { _id: new ObjectId(req.params.id) }
-
-		const dbRes = recipes.deleteOne(toDelete)
-		res.send(dbRes)
-	})
+	// 	res.json({ data: response, hasMore, cursor })
+	// })
 
 	///////////////
 	app.listen(PORT, () => {

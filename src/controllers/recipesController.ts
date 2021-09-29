@@ -6,31 +6,28 @@ import { updateMongo } from '../updateMongo'
 
 //
 //type lookupIngredients = typeof lookupIngredients
-const lookupIngredients = {
-	from: 'ingredients',
-	localField: 'ingredients.ingredient_id',
-	foreignField: '_id',
-	as: 'ingredients_full',
-}
+// const lookupIngredients = {
+// 	from: 'ingredients',
+// 	localField: 'ingredients.ingredient_id',
+// 	foreignField: '_id',
+// 	as: 'ingredients_full',
+// }
 //
 
 ///////////////
 export const recipesGetAll = async (req: Request, res: Response) => {
-	//console.log('recipesGetAll')
+	console.log('getbyall')
 	const recipes = req.app.locals.db.collection('recipes')
 
 	const response = await recipes
-		.aggregate([
-			{ $match: { _id: { $exists: true } } },
-			{ $lookup: lookupIngredients },
-		])
+		.aggregate([{ $match: { _id: { $exists: true } } }])
 		.toArray()
 	res.json(response)
 }
 
 //////////////
 export const recipesGetById = async (req: Request, res: Response) => {
-	//console.log('recipesGetById')
+	console.log('getbyid')
 	const recipes = req.app.locals.db.collection('recipes')
 	const recipeId = req.params.id
 
@@ -39,45 +36,40 @@ export const recipesGetById = async (req: Request, res: Response) => {
 	}
 
 	const response = await recipes
-		.aggregate([
-			{ $match: { _id: new ObjectId(recipeId) } },
-			{ $lookup: lookupIngredients },
-		])
+		.aggregate([{ $match: { _id: new ObjectId(recipeId) } }])
 		.toArray()
 	res.json(response)
 }
 
 //////////////////
 export const recipesGet = async (req: UserRequest, res: Response) => {
-	//onsole.log('recipesGet')
+	console.log('recipesGet')
 	const recipes = req.app.locals.db.collection('recipes')
 	const query = req.query
+	//////////////////////
+	let hasMore,
+		limit = 100,
+		cursor = query.cursor ?? 0
 
-	type QueryScaffold = {}[]
-	//type tagQuery = typeof tagQuery
-	// type QueryScaffold =
-	// 	Partial<nameQuery> &
-	// 	Partial<tagQuery> &
-	// 	Partial<calQuery> &
-	// 	Partial<defaultQuery> &
-	// 	lookupIngredients
+	if (query.limit) limit = parseInt(query.limit)
+	/////////////////////////
 
 	// core query array
-	const queryScaffold: QueryScaffold = [{ $lookup: lookupIngredients }]
+	const queryScaffold = [{ $match: { _id: { $gt: new ObjectId(cursor) } } }]
 
 	// search recipes (by name)
 	if (query.search) {
 		const search = Array.isArray(query.search) ? query.search[0] : query.search
 		const reggie = new RegExp(search as string, 'i')
-		const nameQuery = { $match: { name: { $regex: reggie } } }
+		const nameQuery = { $match: { label: { $regex: reggie } } }
 		queryScaffold.unshift(nameQuery)
 	}
 
-	//search by filter tags
+	// search by filter tags
 	if (query.filters) {
 		//@ts-ignore
 		const tagFilter = [].concat(query.filters)
-		const tagQuery = { $match: { tags: { $all: tagFilter } } }
+		const tagQuery = { $match: { healthLabels: { $all: tagFilter } } }
 		queryScaffold.unshift(tagQuery)
 	}
 
@@ -100,22 +92,22 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 
 	//unmatch private recipes unless created by user
 	if (req.userId) {
-		if (query.showOnlyCreated === 'true') {
-			const showCreatedQuery = {
-				$match: { createdBy: new ObjectId(req.userId) },
-			}
-			queryScaffold.unshift(showCreatedQuery)
-		} else {
-			const createdByQuery = {
-				$match: {
-					$or: [{ isPrivate: false }, { createdBy: new ObjectId(req.userId) }],
-				},
-			}
-			queryScaffold.unshift(createdByQuery)
-		}
+		// if (query.showOnlyCreated === 'true') {
+		// 	const showCreatedQuery = {
+		// 		$match: { createdBy: new ObjectId(req.userId) },
+		// 	}
+		// 	queryScaffold.unshift(showCreatedQuery)
+		// } else {
+		// 	const createdByQuery = {
+		// 		$match: {
+		// 			$or: [{ isPrivate: false }, { createdBy: new ObjectId(req.userId) }],
+		// 		},
+		// 	}
+		// 	queryScaffold.unshift(createdByQuery)
+		// }
 	} else {
-		const privateQuery = { $match: { isPrivate: false } }
-		queryScaffold.unshift(privateQuery)
+		// const privateQuery = { $match: { isPrivate: false } }
+		// queryScaffold.unshift(privateQuery)
 	}
 
 	// return all if no query provided
@@ -126,13 +118,21 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 
 	const calSet = {
 		$set: {
-			serving_cal: { $round: [{ $divide: ['$calories', '$servings'] }] },
+			serving_cal: { $round: [{ $divide: ['$calories', '$yield'] }] },
 		},
 	}
 	queryScaffold.unshift(calSet)
 
 	// search mongodb with final query
-	let result = await recipes.aggregate(queryScaffold).toArray()
+	let result = await recipes
+		.aggregate(queryScaffold)
+		.sort({ _id: 1 })
+		.limit(limit)
+		.toArray()
+
+	////////////////////////////
+	cursor = result[limit - 1]._id
+	///////////////////////////////
 
 	// mark user favorites if logged in
 	if (req.userId) {
@@ -161,27 +161,27 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 	}
 
 	// convert currency on results
-	if (query.currency) {
-		const convertCurrency = (
-			currObj: { value: number; curr?: string },
-			convTo: string
-		) => {
-			let ratioToUSD = 1
-			if (convTo === 'EUR') ratioToUSD = 1.18
-			else if (convTo === 'MXN') ratioToUSD = 20.13
+	// if (query.currency) {
+	// 	const convertCurrency = (
+	// 		currObj: { value: number; curr?: string },
+	// 		convTo: string
+	// 	) => {
+	// 		let ratioToUSD = 1
+	// 		if (convTo === 'EUR') ratioToUSD = 1.18
+	// 		else if (convTo === 'MXN') ratioToUSD = 20.13
 
-			return {
-				value: Math.round(currObj.value * ratioToUSD),
-				currency: convTo,
-			}
-		}
+	// 		return {
+	// 			value: Math.round(currObj.value * ratioToUSD),
+	// 			currency: convTo,
+	// 		}
+	// 	}
 
-		result = result.map((recipe: RecipeBase) => ({
-			...recipe,
-			cost: convertCurrency(recipe.cost, query.currency as string),
-		}))
-		//return converted
-	}
+	// 	result = result.map((recipe: RecipeBase) => ({
+	// 		...recipe,
+	// 		cost: convertCurrency(recipe.cost, query.currency as string),
+	// 	}))
+	// 	//return converted
+	// }
 
 	res.json(result)
 }
