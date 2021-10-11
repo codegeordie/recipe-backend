@@ -131,7 +131,9 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 		.toArray()
 
 	////////////////////////////
-	cursor = result[limit - 1]._id
+	cursor = result[limit - 1]?._id
+	hasMore = cursor ? true : false
+	console.log('cursor, hasMore :>> ', cursor, hasMore)
 	///////////////////////////////
 
 	// mark user favorites if logged in
@@ -183,7 +185,7 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 	// 	//return converted
 	// }
 
-	res.json(result)
+	res.json({ data: result, cursor, hasMore })
 }
 
 //////////////////////
