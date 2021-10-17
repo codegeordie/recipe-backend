@@ -25,12 +25,12 @@ app.use(express.urlencoded({ limit: '25mb', extended: true }))
 app.use(cookieParser())
 app.use(verifyNextAuthToken)
 
-MongoClient.connect(process.env.DB_URL222, function (err, client) {
+MongoClient.connect(process.env.DB_URL, function (err, client) {
 	if (err) throw new Error('Cannot connect to MongoDB')
 
-	//app.locals.db = client?.db('recipe')
-	app.locals.db = client?.db('recipedb')
-	app.locals.dbNEW = client?.db('recipedb')
+	app.locals.db = client?.db('recipe')
+	//app.locals.db = client?.db('recipedb')
+	//app.locals.dbNEW = client?.db('recipedb')
 	if (!app.locals.db) throw new Error('Database is undefined')
 
 	app.use('/api/recipes', recipeRouter)

@@ -13,7 +13,8 @@ export async function queryTags(req: Request) {
 	const result = await recipes
 		.aggregate([
 			{ $unwind: '$healthLabels' },
-			{ $group: { _id: { tag_name: '$healthLabels' }, count: { $count: {} } } },
+			{ $group: { _id: { tag_name: '$healthLabels' } } },
+			//, count: { $count: {} } } },
 			{ $sort: { _id: 1 } },
 		])
 		.toArray()
