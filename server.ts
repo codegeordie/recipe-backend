@@ -59,32 +59,16 @@ MongoClient.connect(process.env.DB_URL, function (err, client) {
 	})
 	/////////////////
 
-	// app.get('/api/testinggg/', async (req, res) => {
-	// 	const recipes = req.app.locals.db.collection('recipes')
-	// 	const query = req.query
+	app.get('/api/testinggg/', async (req, res) => {
+		const recipes = req.app.locals.db.collection('recipes')
 
-	// 	let hasMore,
-	// 		limit = 20,
-	// 		cursor = query.cursor ?? 0
+		const response = await recipes.updateMany(
+			{ $match: { _id: { $exists: true } } },
+			{ $set: { cost: `${Math.floor(Math.random() * 5000)}` } }
+		)
 
-	// 	if (query.limit) limit = parseInt(query.limit)
-	// 	console.log('limit :>> ', limit)
-	// 	console.log('cursor :>> ', cursor)
-
-	// 	const response = await recipes
-	// 		.aggregate([
-	// 			{ $match: { _id: { $exists: true } } },
-	// 			{ $match: { _id: { $gt: new ObjectId(cursor) } } },
-	// 		])
-	// 		.sort({ _id: 1 })
-	// 		.limit(limit)
-	// 		.toArray()
-
-	// 	cursor = response[limit - 1]._id
-	// 	console.log('cursor :>> ', cursor)
-
-	// 	res.json({ data: response, hasMore, cursor })
-	// })
+		res.json(response)
+	})
 
 	///////////////
 	app.listen(PORT, () => {

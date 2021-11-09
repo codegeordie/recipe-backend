@@ -49,10 +49,27 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 	//////////////////////
 	let hasMore,
 		limit = 100,
-		cursor = query.cursor ?? 0
+		cursor = query.cursor ?? 0,
+		skip = 0
 
 	if (query.limit) limit = parseInt(query.limit)
+	///
+	if (query.skip) skip = parseInt(query.skip)
 	/////////////////////////
+
+	/////////////////
+	// const sortCategory = query.recipeSort?.id
+	// const sortDirection = query.recipeSort?.desc ? 1 : 0
+	// const sort = sortCategory ? { [sortCategory]: sortDirection } : undefined
+	// const querySort = query.recipeSort?.replace(/^"|"$/g, '')
+	let querySort = undefined
+	if (query.recipeSort) {
+		querySort = JSON.parse(query.recipeSort)
+	}
+	console.log('query.recipeSort :>> ', query.recipeSort)
+	console.log('querySort :>> ', querySort)
+	const sort = querySort ?? { _id: 1 }
+	/////////////////
 
 	// core query array
 	const queryScaffold = [{ $match: { _id: { $gt: new ObjectId(cursor) } } }]
@@ -126,7 +143,8 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 	// search mongodb with final query
 	let result = await recipes
 		.aggregate(queryScaffold)
-		.sort({ _id: 1 })
+		.sort(sort)
+		.skip(skip)
 		.limit(limit)
 		.toArray()
 
@@ -134,6 +152,8 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 	cursor = result[limit - 1]?._id
 	hasMore = cursor ? true : false
 	console.log('cursor, hasMore :>> ', cursor, hasMore)
+	//////
+	skip += limit
 	///////////////////////////////
 
 	// mark user favorites if logged in
@@ -184,8 +204,7 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 	// 	}))
 	// 	//return converted
 	// }
-
-	res.json({ data: result, cursor, hasMore })
+	res.json({ data: result, cursor, hasMore, skip })
 }
 
 //////////////////////
