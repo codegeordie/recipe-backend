@@ -4,16 +4,6 @@ import { ObjectId } from 'mongodb'
 import { UserRequest, RecipeBase } from '../../@types/types'
 import { updateMongo } from '../updateMongo'
 
-//
-//type lookupIngredients = typeof lookupIngredients
-// const lookupIngredients = {
-// 	from: 'ingredients',
-// 	localField: 'ingredients.ingredient_id',
-// 	foreignField: '_id',
-// 	as: 'ingredients_full',
-// }
-//
-
 ///////////////
 export const recipesGetAll = async (req: Request, res: Response) => {
 	console.log('getbyall')
@@ -43,35 +33,25 @@ export const recipesGetById = async (req: Request, res: Response) => {
 
 //////////////////
 export const recipesGet = async (req: UserRequest, res: Response) => {
-	console.log('recipesGet')
 	const recipes = req.app.locals.db.collection('recipes')
 	const query = req.query
-	//////////////////////
+
 	let hasMore,
 		limit = 100,
 		cursor = query.cursor ?? 0,
-		skip = 0
+		skip = 0,
+		querySort = undefined
 
-	if (query.limit) limit = parseInt(query.limit)
-	///
-	if (query.skip) skip = parseInt(query.skip)
-	/////////////////////////
-
-	/////////////////
-	// const sortCategory = query.recipeSort?.id
-	// const sortDirection = query.recipeSort?.desc ? 1 : 0
-	// const sort = sortCategory ? { [sortCategory]: sortDirection } : undefined
-	// const querySort = query.recipeSort?.replace(/^"|"$/g, '')
-	let querySort = undefined
+	if (query.limit) limit = parseInt(query.limit as string)
+	if (query.skip) skip = parseInt(query.skip as string)
 	if (query.recipeSort) {
 		querySort = JSON.parse(query.recipeSort)
+		cursor = 0
 	}
-	console.log('query.recipeSort :>> ', query.recipeSort)
-	console.log('querySort :>> ', querySort)
-	const sort = querySort ?? { _id: 1 }
-	/////////////////
 
-	// core query array
+	const sort = querySort ?? { _id: 1 }
+
+	// query array start:
 	const queryScaffold = [{ $match: { _id: { $gt: new ObjectId(cursor) } } }]
 
 	// search recipes (by name)
@@ -108,30 +88,30 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 	}
 
 	//unmatch private recipes unless created by user
-	if (req.userId) {
-		// if (query.showOnlyCreated === 'true') {
-		// 	const showCreatedQuery = {
-		// 		$match: { createdBy: new ObjectId(req.userId) },
-		// 	}
-		// 	queryScaffold.unshift(showCreatedQuery)
-		// } else {
-		// 	const createdByQuery = {
-		// 		$match: {
-		// 			$or: [{ isPrivate: false }, { createdBy: new ObjectId(req.userId) }],
-		// 		},
-		// 	}
-		// 	queryScaffold.unshift(createdByQuery)
-		// }
-	} else {
-		// const privateQuery = { $match: { isPrivate: false } }
-		// queryScaffold.unshift(privateQuery)
-	}
+	// if (req.userId) {
+	// 	if (query.showOnlyCreated === 'true') {
+	// 		const showCreatedQuery = {
+	// 			$match: { createdBy: new ObjectId(req.userId) },
+	// 		}
+	// 		queryScaffold.unshift(showCreatedQuery)
+	// 	} else {
+	// 		const createdByQuery = {
+	// 			$match: {
+	// 				$or: [{ isPrivate: false }, { createdBy: new ObjectId(req.userId) }],
+	// 			},
+	// 		}
+	// 		queryScaffold.unshift(createdByQuery)
+	// 	}
+	// } else {
+	// 	const privateQuery = { $match: { isPrivate: false } }
+	// 	queryScaffold.unshift(privateQuery)
+	// }
 
 	// return all if no query provided
-	if (queryScaffold.length === 1) {
-		const defaultQuery = { $match: { _id: { $exists: true } } }
-		queryScaffold.unshift(defaultQuery)
-	}
+	// if (queryScaffold.length === 0) {
+	// 	const defaultQuery = { $match: { _id: { $exists: true } } }
+	// 	queryScaffold.unshift(defaultQuery)
+	// }
 
 	const calSet = {
 		$set: {
@@ -148,13 +128,14 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 		.limit(limit)
 		.toArray()
 
-	////////////////////////////
+	///
 	cursor = result[limit - 1]?._id
 	hasMore = cursor ? true : false
-	console.log('cursor, hasMore :>> ', cursor, hasMore)
-	//////
-	skip += limit
-	///////////////////////////////
+	if (querySort) {
+		skip += limit
+		cursor = 0
+	}
+	///
 
 	// mark user favorites if logged in
 	if (req.userId) {

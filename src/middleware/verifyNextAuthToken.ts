@@ -16,7 +16,7 @@ export const verifyNextAuthToken = (
 	//console.log('token :>> ', token)
 
 	if (!token) {
-		console.log('no token')
+		//console.log('no token')
 		req.userId = undefined
 		next()
 	} else {
