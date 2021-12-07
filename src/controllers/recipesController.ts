@@ -6,7 +6,6 @@ import { updateMongo } from '../updateMongo'
 
 ///////////////
 export const recipesGetAll = async (req: Request, res: Response) => {
-	console.log('getbyall')
 	const recipes = req.app.locals.db.collection('recipes')
 
 	const response = await recipes
@@ -17,7 +16,6 @@ export const recipesGetAll = async (req: Request, res: Response) => {
 
 //////////////
 export const recipesGetById = async (req: Request, res: Response) => {
-	console.log('getbyid')
 	const recipes = req.app.locals.db.collection('recipes')
 	const recipeId = req.params.id
 
@@ -163,35 +161,31 @@ export const recipesGet = async (req: UserRequest, res: Response) => {
 		}
 	}
 
-	// convert currency on results
-	// if (query.currency) {
-	// 	const convertCurrency = (
-	// 		currObj: { value: number; curr?: string },
-	// 		convTo: string
-	// 	) => {
-	// 		let ratioToUSD = 1
-	// 		if (convTo === 'EUR') ratioToUSD = 1.18
-	// 		else if (convTo === 'MXN') ratioToUSD = 20.13
+	//convert currency on results
+	if (query.currency) {
+		const convertCurrency = (amount: number, convTo: string) => {
+			let ratioToUSD = 1
+			if (convTo === 'EUR') ratioToUSD = 1.18
+			else if (convTo === 'MXN') ratioToUSD = 20.13
 
-	// 		return {
-	// 			value: Math.round(currObj.value * ratioToUSD),
-	// 			currency: convTo,
-	// 		}
-	// 	}
+			return {
+				value: Math.round(amount * ratioToUSD),
+				currency: convTo,
+			}
+		}
 
-	// 	result = result.map((recipe: RecipeBase) => ({
-	// 		...recipe,
-	// 		cost: convertCurrency(recipe.cost, query.currency as string),
-	// 	}))
-	// 	//return converted
-	// }
+		result = result.map((recipe: RecipeBase) => ({
+			...recipe,
+			cost: convertCurrency(recipe.cost, query.currency as string),
+		}))
+	}
+
 	res.json({ data: result, cursor, hasMore, skip })
 }
 
 //////////////////////
 
 export const recipesDelete = async (req: UserRequest, res: Response) => {
-	console.log('recipesDelete')
 	const recipes = req.app.locals.db.collection('recipes')
 	const recipeId = req.params.id
 
@@ -210,7 +204,6 @@ export const recipesDelete = async (req: UserRequest, res: Response) => {
 //////////////////////
 
 export const recipesUpdate = async (req: Request, res: Response) => {
-	console.log('recipesUpdate')
 	const recipes = req.app.locals.db.collection('recipes')
 	const recipeId = req.params.id
 
@@ -225,11 +218,9 @@ export const recipesUpdate = async (req: Request, res: Response) => {
 //////////////////////
 
 export const recipesCreate = async (req: UserRequest, res: Response) => {
-	console.log('recipesCreate')
 	const recipes = req.app.locals.db.collection('recipes')
 	const updatedRecipe = recipeUpdate(req.body, req.userId)
 
-	//console.log('updatedRecipe :>> ', updatedRecipe)
 	const response = recipes.insertOne(updatedRecipe).then(updateMongo(req))
 	res.json(response)
 }

@@ -2,7 +2,7 @@ import express from 'express'
 import 'dotenv/config'
 import cors from 'cors'
 import formidable from 'formidable'
-import { MongoClient, ObjectId } from 'mongodb'
+import { MongoClient } from 'mongodb'
 import cookieParser from 'cookie-parser'
 
 import { recipeRouter } from './src/routes/recipeRoutes'
@@ -25,12 +25,10 @@ app.use(express.urlencoded({ limit: '25mb', extended: true }))
 app.use(cookieParser())
 app.use(verifyNextAuthToken)
 
-MongoClient.connect(process.env.DB_URL, function (err, client) {
+MongoClient.connect(process.env.DB_URL as string, function (err, client) {
 	if (err) throw new Error('Cannot connect to MongoDB')
 
 	app.locals.db = client?.db('recipe')
-	//app.locals.db = client?.db('recipedb')
-	//app.locals.dbNEW = client?.db('recipedb')
 	if (!app.locals.db) throw new Error('Database is undefined')
 
 	app.use('/api/recipes', recipeRouter)
@@ -57,27 +55,9 @@ MongoClient.connect(process.env.DB_URL, function (err, client) {
 			res.json({ url: uploadFilePath })
 		})
 	})
-	/////////////////
-
-	app.get('/api/testinggg/', async (req, res) => {
-		const recipes = req.app.locals.db.collection('recipes')
-
-		const response = await recipes.updateMany(
-			{ $match: { _id: { $exists: true } } },
-			{ $set: { cost: `${Math.floor(Math.random() * 5000)}` } }
-		)
-
-		res.json(response)
-	})
 
 	///////////////
 	app.listen(PORT, () => {
 		console.log(`The application is listening on port ${PORT}!`)
 	})
 })
-
-// function identity<Type>(arg?: Type): Type {
-// 	return arg
-// }
-// const x = identity(1)
-// console.log('x :>> ', x)

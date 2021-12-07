@@ -54,7 +54,7 @@ export type RecipeBase = {
 	tags: string[]
 	servings: number
 	calories: number
-	cost: { value: number; currency: string }
+	cost: number
 	ingredients: RecipeIngredients[]
 	favorited?: boolean
 	uid?: string
