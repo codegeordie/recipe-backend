@@ -28,7 +28,7 @@ export const recipesGetById = async (req: Request, res: Response) => {
 	const response = await recipes
 		.aggregate([{ $match: { _id: new ObjectId(recipeId) } }])
 		.toArray()
-	res.json(response)
+	res.json(response[0])
 }
 
 //////////////////
